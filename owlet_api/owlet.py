@@ -128,16 +128,21 @@ class Owlet():
 
     def download_logged_data(self):
         """Download "LOGGED_DATA_CACHE", content currently unknown."""
-        if not self.properties:
+        if self.properties is None:
             raise OwletNotInitializedException(
                 'Initialize first - no properties')
 
-        if 'LOGGED_DATA_CACHE' not in self.properties:
+        if 'VITALS_LOG_DATA' not in self.properties:
             raise OwletNotInitializedException(
                 'Initialize first - missing property')
 
-        download_url = self.properties['LOGGED_DATA_CACHE'].value
+
+        #print(self.properties['VITALS_LOG_FILE'].value)
+        #download_url = self.properties['VITALS_LOG_DATA'].value
+        download_url = self.properties['VITALS_LOG_FILE'].value
+        print(download_url)
         download_header = self.owlet_api.get_request_headers()
+        print(download_header)
 
         try:
             result = requests.get(
