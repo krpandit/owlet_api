@@ -5,7 +5,8 @@ import time
 import requests
 
 from enum import Enum
-from firebase import Firebase
+import json
+#from firebase import Firebase
 from json.decoder import JSONDecodeError
 from requests.exceptions import RequestException
 
@@ -102,12 +103,29 @@ class OwletAPI():
                 }
 
         # Configure firebase
-        firebase_auth_instance = Firebase(firebase_config).auth()
+        #firebase_auth_instance = Firebase(firebase_config).auth()
+
+        ## Adapted from https://github.com/mbevand/owlet_monitor
+        # authenticate against Firebase, get the JWT.
+        # need to pass the X-Android-Package and X-Android-Cert headers because
+        # the API key is restricted to the Owlet Android app
+        # https://cloud.google.com/docs/authentication/api-keys#api_key_restrictions
+
+        api_key = config['firebase_api_key']
+        owlet_user = self._email
+        owlet_pass = self._password
+
 
         # Login to Firebase
         try:
-            login = firebase_auth_instance.sign_in_with_email_and_password(
-                    self._email, self._password)
+            r = requests.post(f'https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key={api_key}',
+                    data=json.dumps({'email': owlet_user, 'password': owlet_pass, 'returnSecureToken': True}),
+                    headers={
+                        'X-Android-Package': 'com.owletcare.owletcare',
+                        'X-Android-Cert': '2A3BC26DB0B8B0792DBE28E6FFDC2598F9B12B74'
+                })
+            r.raise_for_status()
+
         except requests.exceptions.HTTPError:
             raise OwletPermanentCommunicationException(
                     "Login failed, check username and password")
@@ -117,7 +135,7 @@ class OwletAPI():
 
         # Pull out the JWT
         try:
-            json_web_token = login['idToken']
+            json_web_token = r.json()['idToken']
         except KeyError:
             raise OwletTemporaryCommunicationException(
                     "Server did not supply idToken, try again")
